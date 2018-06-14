@@ -586,7 +586,7 @@ static int wpa_supplicant_ssid_bss_match(struct wpa_supplicant *wpa_s,
 		if (!(ie.key_mgmt & ssid->key_mgmt)) {
 			if (debug_print)
 				wpa_dbg(wpa_s, MSG_DEBUG,
-					"   skip RSN IE - key mgmt mismatch");
+					"   skip RSN IE - key mgmt mismatch ie.key_mgmt %d  ssid->key_mgmt %d",ie.key_mgmt,ssid->key_mgmt);
 			break;
 		}
 
@@ -4013,6 +4013,17 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		wpa_s->assoc_timed_out = data->assoc_reject.timed_out;
 		wpas_notify_assoc_status_code(wpa_s);
 
+#ifdef CONFIG_SAE
+		if (wpa_key_mgmt_sae(wpa_s->current_ssid->key_mgmt) &&
+		    !data->assoc_reject.timed_out &&
+		    wpa_s->current_ssid) {
+			wpa_dbg(wpa_s, MSG_DEBUG,
+				"SAE: drop PMKSA cache entry");
+			wpa_sm_aborted_cached(wpa_s->wpa);
+			wpa_sm_pmksa_cache_flush(wpa_s->wpa,
+						 wpa_s->current_ssid);
+		}
+#endif
 #ifdef CONFIG_OWE
 		if (data->assoc_reject.status_code ==
 		    WLAN_STATUS_FINITE_CYCLIC_GROUP_NOT_SUPPORTED &&
@@ -4023,12 +4034,20 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 			struct wpa_ssid *ssid = wpa_s->current_ssid;
 			struct wpa_bss *bss = wpa_s->current_bss;
 
-			wpa_printf(MSG_DEBUG,
-				   "OWE: Try next supported DH group");
-			wpas_connect_work_done(wpa_s);
-			wpa_supplicant_mark_disassoc(wpa_s);
-			wpa_supplicant_connect(wpa_s, bss, ssid);
-			break;
+			if (!bss) {
+				const u8 *bssid = data->assoc_reject.bssid;
+				if (bssid == NULL || is_zero_ether_addr(bssid))
+					bssid = wpa_s->pending_bssid;
+				bss = wpa_supplicant_get_new_bss(wpa_s, bssid);
+			}
+			if (bss) {
+				wpa_printf(MSG_DEBUG,
+					   "OWE: Try next supported DH group");
+				wpas_connect_work_done(wpa_s);
+				wpa_supplicant_mark_disassoc(wpa_s);
+				wpa_supplicant_connect(wpa_s, bss, ssid);
+				break;
+			}
 		}
 #endif /* CONFIG_OWE */
 
