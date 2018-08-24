@@ -69,12 +69,6 @@ typedef enum {
         EAP_PROXY_AUTH_SUCCESS,  EAP_PROXY_AUTH_FAILURE
 } eap_proxy_state;
 
-
-enum eap_proxy_status {
-        EAP_PROXY_FAILURE = 0x00,
-        EAP_PROXY_SUCCESS
-};
-
 typedef enum {
         EAP_IDENTITY_ANNONYMOUS = 0x00,
         EAP_IDENTITY_IMSI_RAW  = 0x02,

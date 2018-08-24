@@ -1717,6 +1717,19 @@ LOCAL_SRC_FILES := $(OBJS_c)
 LOCAL_C_INCLUDES := $(INCLUDES)
 include $(BUILD_EXECUTABLE)
 
+#####################################
+
+include $(CLEAR_VARS)
+
+LOCAL_SRC_FILES := move_wifi_data.sh
+LOCAL_MODULE_CLASS := EXECUTABLES
+LOCAL_MODULE := $(LOCAL_SRC_FILES)
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE_OWNER := qti
+LOCAL_MODULE := move_wifi_data.sh
+
+include $(BUILD_PREBUILT)
+
 ########################
 include $(CLEAR_VARS)
 LOCAL_MODULE := wpa_supplicant
