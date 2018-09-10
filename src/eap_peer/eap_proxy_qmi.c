@@ -98,7 +98,6 @@ static inline pid_t gettid(void)
 #endif
 #endif
 
-static pthread_mutex_t lock;
 static void eap_proxy_qmi_deinit(struct eap_proxy_sm *eap_proxy);
 static void eap_proxy_eapol_sm_set_bool(struct eap_proxy_sm *sm,
                          enum eapol_bool_var var, Boolean value);
@@ -682,7 +681,7 @@ void wpa_qmi_handle_ssr(qmi_client_type user_handle, qmi_client_error_type error
 {
         struct eap_proxy_sm *eap_proxy = err_cb_data;
 
-        pthread_mutex_lock(&lock);       // Lock
+        pthread_mutex_lock(&(eap_proxy->lock));       // Lock
         wpa_printf(MSG_ERROR, "eap_proxy: %s eap_proxy=%p", __func__, eap_proxy);
 
         if (eap_proxy->qmi_ssr_in_progress) {
@@ -691,7 +690,7 @@ void wpa_qmi_handle_ssr(qmi_client_type user_handle, qmi_client_error_type error
                 eap_proxy->qmi_ssr_in_progress = TRUE;
                 eloop_register_timeout(0, 0, wpa_qmi_register_notification, eap_proxy, NULL);
         }
-        pthread_mutex_unlock(&lock);      // Unlock
+        pthread_mutex_unlock(&(eap_proxy->lock));      // Unlock
 }
 
 static void eap_proxy_post_init(struct eap_proxy_sm *eap_proxy)
@@ -892,11 +891,6 @@ eap_proxy_init(void *eapol_ctx, const struct eapol_callbacks *eapol_cb,
         int ret;
 
         wpa_printf(MSG_ERROR, "eap_proxy: %s", __func__);
-        ret = pthread_mutex_init(&lock, NULL);
-        if (ret != 0) {
-               wpa_printf(MSG_ERROR, "eap_proxy: mutex init failed ret=%d", ret);
-               return NULL;
-        }
         eap_proxy =  os_zalloc(sizeof(struct eap_proxy_sm));
         if (NULL == eap_proxy) {
                 wpa_printf(MSG_ERROR, "Error memory alloc  for eap_proxy"
@@ -909,6 +903,12 @@ eap_proxy_init(void *eapol_ctx, const struct eapol_callbacks *eapol_cb,
         eap_proxy->msg_ctx = msg_ctx;
 
         eap_proxy->proxy_state = EAP_PROXY_DISABLED;
+
+        ret = pthread_mutex_init(&(eap_proxy->lock), NULL);
+        if (ret != 0) {
+               wpa_printf(MSG_ERROR, "eap_proxy: mutex init failed ret=%d", ret);
+               return NULL;
+        }
 
         /* delay the qmi client initialization after the eloop_run starts,
         * in order to avoid the case of daemonize enabled, which exits the
@@ -1001,9 +1001,9 @@ void eap_proxy_deinit(struct eap_proxy_sm *eap_proxy)
 {
         eap_proxy_qmi_deinit(eap_proxy);
         if (eap_proxy != NULL) {
+            pthread_mutex_destroy(&(eap_proxy->lock));
             os_free(eap_proxy);
             eap_proxy = NULL;
-            pthread_mutex_destroy(&lock);
             wpa_printf(MSG_INFO, "eap_proxy: eap_proxy Deinitialzed\n");
         }
 }

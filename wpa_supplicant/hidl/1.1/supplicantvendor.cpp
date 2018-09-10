@@ -86,7 +86,18 @@ SupplicantVendor::getVendorInterfaceInternal(const ISupplicant::IfaceInfo& iface
 			nullptr};
 	}
 	HidlManager* hidl_manager = HidlManager::getInstance();
-		wpa_printf(MSG_INFO, "get vendor iface object");
+	if (iface_info.type == IfaceType::P2P) {
+		wpa_printf(MSG_INFO, "get vendor p2p iface object");
+		android::sp<ISupplicantVendorP2PIface> iface;
+		if (!hidl_manager ||
+		    hidl_manager->getVendorP2pIfaceHidlObjectByIfname(
+			wpa_s->ifname, &iface)) {
+			return {{SupplicantStatusCode::FAILURE_UNKNOWN, ""},
+				iface};
+		}
+		return {{SupplicantStatusCode::SUCCESS, ""}, iface};
+	} else {
+		wpa_printf(MSG_INFO, "get vendor sta iface object");
 		android::sp<ISupplicantVendorStaIface> vendor_iface;
 		if (!hidl_manager ||
 		    hidl_manager->getVendorStaIfaceHidlObjectByIfname(
@@ -95,6 +106,7 @@ SupplicantVendor::getVendorInterfaceInternal(const ISupplicant::IfaceInfo& iface
 				vendor_iface};
 		}
 		return {{SupplicantStatusCode::SUCCESS, ""}, vendor_iface};
+	}
 }
 
 std::pair<SupplicantStatus, std::vector<ISupplicant::IfaceInfo>>

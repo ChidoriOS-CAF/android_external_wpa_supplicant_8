@@ -172,9 +172,12 @@ std::string AddOrUpdateHostapdConfig(
 		return "";
 	}
 
+	qsap_cmd(StringPrintf(kQsapSetFmt, dual_mode_str, "acs_exclude_dfs", "0"));
 	if (iface_params.channelParams.enableAcs) {
 		qsap_cmd(StringPrintf(kQsapSetFmt, dual_mode_str, "channel", "0"));
-		// TODO: add support for acs_exclude_dfs param in qsap then add config here.
+		if (iface_params.channelParams.acsShouldExcludeDfs) {
+			qsap_cmd(StringPrintf(kQsapSetFmt, dual_mode_str, "acs_exclude_dfs", "1"));
+		}
 	} else {
 		qsap_cmd(StringPrintf(kQsapSetFmt, dual_mode_str, "channel", std::to_string(iface_params.channelParams.channel).c_str()));
 	}

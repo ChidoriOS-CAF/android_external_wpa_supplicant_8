@@ -130,6 +130,7 @@ struct eap_proxy_sm {
         u8 *session_id;
         size_t session_id_len;
         u8 *emsk;
+        pthread_mutex_t lock;
 };
 
 int eap_proxy_allowed_method(struct eap_peer_config *config, int vendor,
