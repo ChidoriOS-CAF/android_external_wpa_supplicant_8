@@ -9,6 +9,8 @@
 
 #include <hwbinder/IPCThreadState.h>
 #include <hidl/HidlTransportSupport.h>
+#include <hwbinder/ProcessState.h>
+#include <cutils/properties.h>
 
 #include "hostapd.h"
 
@@ -46,9 +48,23 @@ void hostapd_hidl_sock_handler(
 	IPCThreadState::self()->handlePolledCommands();
 }
 
+#ifdef ARCH_ARM_32
+#define DEFAULT_WIFISUPP_HW_BINDER_SIZE_KB 4
+size_t getHWBinderMmapSize() {
+	size_t value = 0;
+	value = property_get_int32("persist.vendor.wifi.supplicant.hw.binder.size", DEFAULT_WIFISUPP_HW_BINDER_SIZE_KB);
+	if (!value) value = DEFAULT_WIFISUPP_HW_BINDER_SIZE_KB; // deafult to 1 page of 4 Kb
+
+	return 1024 * value;
+}
+#endif /* ARCH_ARM_32 */
+
 int hostapd_hidl_init(struct hapd_interfaces *interfaces)
 {
 	wpa_printf(MSG_DEBUG, "Initing hidl control");
+#ifdef ARCH_ARM_32
+	android::hardware::ProcessState::initWithMmapSize(getHWBinderMmapSize());
+#endif /* ARCH_ARM_32 */
 
 	IPCThreadState::self()->disableBackgroundScheduling(true);
 	IPCThreadState::self()->setupPolling(&hidl_fd);
