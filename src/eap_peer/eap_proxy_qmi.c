@@ -103,7 +103,7 @@ static void eap_proxy_eapol_sm_set_bool(struct eap_proxy_sm *sm,
                          enum eapol_bool_var var, Boolean value);
 static Boolean eap_proxy_eapol_sm_get_bool(struct eap_proxy_sm *sm,
                                         enum eapol_bool_var var);
-static void eap_proxy_schedule_thread(void *eloop_ctx, void *timeout_ctx);
+static void eap_proxy_post_init(struct eap_proxy_sm *eap_proxy);
 
 /* Call-back function to process an authenticationr result indication from
  * QMI EAP service */
@@ -673,8 +673,7 @@ void wpa_qmi_register_notification(void *eloop_ctx, void *timeout_ctx)
         wpa_printf(MSG_ERROR, "eap_proxy: %s", __func__);
 
         eap_proxy_qmi_deinit(eap_proxy);
-        eap_proxy->proxy_state = EAP_PROXY_DISABLED;
-        eloop_register_timeout(0, 0, eap_proxy_schedule_thread, eap_proxy, NULL);
+        eap_proxy_post_init(eap_proxy);
 }
 
 void wpa_qmi_handle_ssr(qmi_client_type user_handle, qmi_client_error_type error, void *err_cb_data)
@@ -878,6 +877,10 @@ static void eap_proxy_schedule_thread(void *eloop_ctx, void *timeout_ctx)
         struct eap_proxy_sm *eap_proxy = eloop_ctx;
         int ret = -1;
 
+        // Make note of new thread creation, so that we can take care of joining.
+        if (eap_proxy != NULL)
+                eap_proxy->qmi_thread_joined = false;
+
         ret = pthread_create(&eap_proxy->thread_id, NULL, eap_proxy_post_init, eap_proxy);
         if(ret < 0)
                wpa_printf(MSG_ERROR, "eap_proxy: starting thread is failed %d\n", ret);
@@ -924,16 +927,22 @@ static void eap_proxy_qmi_deinit(struct eap_proxy_sm *eap_proxy)
 {
         int qmiRetCode;
         int index;
-        wpa_uim_struct_type *wpa_uim = eap_proxy->wpa_uim;
+        wpa_uim_struct_type *wpa_uim = NULL;
 
         if (NULL == eap_proxy)
                 return;
         /* Waiting for eap_proxy_post_init to exit normally.
          * The eap_proxy_post_init may wait for QMI responese.
          * Force killing the thread will cause problem in QMI lib.
+         * Also, Do not join the thread if it was already joined before.
          */
-        pthread_join(eap_proxy->thread_id, NULL);
+        if (!eap_proxy->qmi_thread_joined) {
+                wpa_printf(MSG_ERROR, "eap_proxy: pthread_join on eap_proxy=%p", eap_proxy);
+                pthread_join(eap_proxy->thread_id, NULL);
+                eap_proxy->qmi_thread_joined = true;
+        }
         eap_proxy->proxy_state = EAP_PROXY_DISABLED;
+        wpa_uim = eap_proxy->wpa_uim;
 
         for (index = 0; index < MAX_NO_OF_SIM_SUPPORTED; ++index) {
                 if (TRUE == eap_proxy->eap_auth_session_flag[index]) {

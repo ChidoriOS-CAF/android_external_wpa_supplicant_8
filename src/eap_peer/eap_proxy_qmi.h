@@ -127,6 +127,7 @@ struct eap_proxy_sm {
         wpa_uim_struct_type   wpa_uim[MAX_NO_OF_SIM_SUPPORTED];
         Boolean qmi_uim_svc_client_initialized[MAX_NO_OF_SIM_SUPPORTED];
         Boolean qmi_ssr_in_progress;
+        Boolean qmi_thread_joined;
         u8 *session_id;
         size_t session_id_len;
         u8 *emsk;
