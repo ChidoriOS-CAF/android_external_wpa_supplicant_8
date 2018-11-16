@@ -49,7 +49,9 @@
 #include "wmm_ac.h"
 #include "dpp_supplicant.h"
 
+
 #define MAX_OWE_TRANSITION_BSS_SELECT_COUNT 5
+
 
 #ifndef CONFIG_NO_SCAN_PROCESSING
 static int wpas_select_network_from_last_scan(struct wpa_supplicant *wpa_s,
@@ -702,12 +704,14 @@ static int wpa_supplicant_ssid_bss_match(struct wpa_supplicant *wpa_s,
 #ifdef CONFIG_OWE
 	if ((ssid->key_mgmt & WPA_KEY_MGMT_OWE) && !ssid->owe_only &&
 	    !wpa_ie && !rsn_ie) {
-		ssid->owe_transition_bss_select_count++;
-		if (ssid->owe_transition_bss_select_count <= MAX_OWE_TRANSITION_BSS_SELECT_COUNT) {
+		if (wpa_s->owe_transition_select &&
+		    wpa_bss_get_vendor_ie(bss, OWE_IE_VENDOR_TYPE) &&
+		    ssid->owe_transition_bss_select_count + 1 <=
+		    MAX_OWE_TRANSITION_BSS_SELECT_COUNT) {
+			ssid->owe_transition_bss_select_count++;
 			if (debug_print)
 				wpa_dbg(wpa_s, MSG_DEBUG,
-					"   skip owe transition bss select count %d"
-					" does not exceed %d",
+					"   skip OWE transition BSS (selection count %d does not exceed %d)",
 					ssid->owe_transition_bss_select_count,
 					MAX_OWE_TRANSITION_BSS_SELECT_COUNT);
 			return 0;
@@ -1391,8 +1395,11 @@ wpa_supplicant_select_bss(struct wpa_supplicant *wpa_s,
 
 	for (i = 0; i < wpa_s->last_scan_res_used; i++) {
 		struct wpa_bss *bss = wpa_s->last_scan_res[i];
+
+		wpa_s->owe_transition_select = 1;
 		*selected_ssid = wpa_scan_res_match(wpa_s, i, bss, group,
 						    only_first_ssid, 1);
+		wpa_s->owe_transition_select = 0;
 		if (!*selected_ssid)
 			continue;
 		wpa_dbg(wpa_s, MSG_DEBUG, "   selected BSS " MACSTR

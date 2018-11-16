@@ -12,7 +12,6 @@
 
 #include "hidl_manager.h"
 #include "misc_utils.h"
-
 extern "C" {
 #include "src/eap_common/eap_sim_common.h"
 }
@@ -1241,7 +1240,31 @@ void HidlManager::notifyP2pDeviceFound(
                             peer_wfd_r2_device_info, kWfdR2DeviceInfoLen);
                 }
         }
+        for (int i=0 ;i < P2P_MAX_WPS_VENDOR_EXT;i++) {
+            if(info->wps_vendor_ext[i] != NULL &&
+               WPA_GET_BE24(info->wps_vendor_ext[i]->buf) == 311) {
+                 /* Miracast WSC IE Extension */
+               if(checkForVendorP2pIfaceCallback(wpa_s->ifname) == true) {
+                   size_t infosize = info->wps_vendor_ext[i]->used;
+                   std::vector<uint8_t> data (info->p2p_device_addr,info->p2p_device_addr+6);
+                   std::vector<uint8_t> infobuf(info->wps_vendor_ext[i]->buf,
+                                               info->wps_vendor_ext[i]->buf+infosize);
+                   std::vector<uint8_t>::iterator it;
+                   uint8_t type = (uint8_t) ISupplicantVendorP2PIfaceCallback::InfoElementType::WSC_VENDOR;
+                   it = data.begin();
+                   data.insert(it+6,infobuf.begin(),infobuf.end());
+                   callWithEachVendorP2pIfaceCallback(
+                        wpa_s->ifname,
+                        std::bind(
+                                  &ISupplicantVendorP2PIfaceCallback::onVendorExtensionFound,
+                                  std::placeholders::_1,
+                                  data,
+                                  type));
 
+               }
+               break;
+            }
+        }
         if (checkForVendorP2pIfaceCallback(wpa_s->ifname) == true &&
                 peer_wfd_r2_device_info_len == kWfdR2DeviceInfoLen) {
                 callWithEachVendorP2pIfaceCallback(

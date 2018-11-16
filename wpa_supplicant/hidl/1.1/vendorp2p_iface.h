@@ -101,6 +101,9 @@ private:
 	    const android::sp<ISupplicantVendorP2PIfaceCallback>& callback);
 	SupplicantStatus setWfdR2DeviceInfoInternal(
 	    const std::array<uint8_t, 4>& info);
+	SupplicantStatus setVendorInfoElementInternal(
+        const hidl_vec<uint8_t>& ie,
+        hidl_bitfield<ISupplicantVendorP2PIfaceCallback::InfoElementType> type);
 	std::pair<SupplicantStatus, android::sp<ISupplicantVendorNetwork>> getNetworkInternal(
 	    SupplicantNetworkId id);
 

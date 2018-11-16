@@ -1871,6 +1871,7 @@ static Boolean eap_proxy_build_identity(struct eap_proxy_sm *eap_proxy, u8 id, s
 
 #else /* SIM_AKA_IMSI_RAW_ENABLED */
 
+#ifdef EAP_PROXY_USE_CONFIG_IDENTITY
         if (config->identity_len && config->identity != NULL) {
                 for (idx = 0; idx < config->identity_len; idx++) {
                         if (config->identity[idx] == 64) {
@@ -1955,8 +1956,9 @@ static Boolean eap_proxy_build_identity(struct eap_proxy_sm *eap_proxy, u8 id, s
                         wpa_printf(MSG_ERROR, "eap_proxy: config EAP_IDENTITY_IMSI_3GPP_REALM "
                                 "selected %d\n", eap_auth_start.user_id_len);
                 }
-        } else {
-
+        } else
+#endif /* EAP_PROXY_USE_CONFIG_IDENTITY */
+        {
                 if (config->anonymous_identity_len && config->anonymous_identity != NULL) {
 
                         eap_auth_start.eap_meta_identity_len = config->anonymous_identity_len;

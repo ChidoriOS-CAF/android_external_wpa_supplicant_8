@@ -53,6 +53,15 @@ static int wpa_to_android_level(int level)
 	return ANDROID_LOG_DEBUG;
 }
 
+void set_log_level(int level)
+{
+if (level == 1)
+	wpa_debug_level = MSG_EXCESSIVE;
+else
+	wpa_debug_level = MSG_INFO;
+}
+
+
 #endif /* CONFIG_ANDROID_LOG */
 
 #ifndef CONFIG_NO_STDOUT_DEBUG

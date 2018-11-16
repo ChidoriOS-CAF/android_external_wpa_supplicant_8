@@ -370,4 +370,6 @@ static inline void wpa_debug_close_linux_tracing(void)
 const char * debug_level_str(int level);
 int str_to_debug_level(const char *s);
 
+void set_log_level(int level);
+
 #endif /* WPA_DEBUG_H */

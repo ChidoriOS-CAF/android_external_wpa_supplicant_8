@@ -33,6 +33,11 @@
 #include "hidl.h"
 #endif /* CONFIG_CTRL_IFACE_HIDL */
 
+#ifdef ANDROID
+#include "wpa_debug.h"
+#include <cutils/properties.h>
+#endif /* ANDROID */
+
 struct hapd_global {
 	void **drv_priv;
 	size_t drv_count;
@@ -817,6 +822,20 @@ int main(int argc, char *argv[])
 		wpa_printf(MSG_WARNING, "Failed to add CLI FST ctrl");
 #endif /* CONFIG_FST && CONFIG_CTRL_IFACE */
 
+    wpa_printf(MSG_ERROR, "debug, set loglevel");
+#ifdef ANDROID
+	char ifprop[PROPERTY_VALUE_MAX];
+	if (property_get("vendor.qcom.wifi.debug", ifprop, "0") != 0) {
+		wpa_printf(MSG_ERROR, "debug, ifprop = %s",ifprop);
+		if (os_strcmp("1",ifprop) == 0) {
+			set_log_level(1);
+		}
+		else {
+			set_log_level(0);
+		}
+	}
+#endif /* ANDROID */
+
 	/* Allocate and parse configuration for full interface files */
 	for (i = 0; i < interfaces.count; i++) {
 		char *if_name = NULL;
@@ -882,27 +901,8 @@ int main(int argc, char *argv[])
 	 */
 	interfaces.terminate_on_error = interfaces.count;
 	for (i = 0; i < interfaces.count; i++) {
-		if (hostapd_driver_init(interfaces.iface[i]))
-			goto out;
-#ifdef CONFIG_MBO
-		for (j = 0; j < interfaces.iface[i]->num_bss; j++) {
-			struct hostapd_data *hapd = interfaces.iface[i]->bss[j];
-
-			if (hapd && (hapd->conf->oce & OCE_STA_CFON) &&
-			    (interfaces.iface[i]->drv_flags &
-			     WPA_DRIVER_FLAGS_OCE_STA_CFON))
-				hapd->enable_oce = OCE_STA_CFON;
-
-			if (hapd && (hapd->conf->oce & OCE_AP) &&
-			    (interfaces.iface[i]->drv_flags &
-			     WPA_DRIVER_FLAGS_OCE_STA_CFON)) {
-				/* TODO: Need to add OCE-AP support */
-				wpa_printf(MSG_ERROR,
-					   "OCE-AP feature is not yet supported");
-			}
-		}
-#endif /* CONFIG_MBO */
-		if (hostapd_setup_interface(interfaces.iface[i]))
+		if (hostapd_driver_init(interfaces.iface[i]) ||
+		    hostapd_setup_interface(interfaces.iface[i]))
 			goto out;
 	}
 

@@ -41,6 +41,8 @@ extern "C" {
 #include "ap.h"
 #include "wps_supplicant.h"
 #include "wifi_display.h"
+#include "common.h"
+#include "wpabuf.h"
 }
 
 namespace {
@@ -128,6 +130,21 @@ SupplicantStatus VendorP2pIface::setWfdR2DeviceInfoInternal(
 	return {SupplicantStatusCode::SUCCESS, ""};
 }
 
+SupplicantStatus VendorP2pIface::setVendorInfoElementInternal(
+    const hidl_vec<uint8_t>& info,
+    hidl_bitfield<ISupplicantVendorP2PIfaceCallback::InfoElementType> type)
+{
+	struct wpa_supplicant* wpa_s = retrieveIfacePtr();
+  struct wpabuf *vendor_info = wpabuf_alloc_copy(info.data(),info.size());
+
+	if (p2p_add_wps_vendor_extension(
+		wpa_s->global->p2p, vendor_info)) {
+		return {SupplicantStatusCode::FAILURE_UNKNOWN, ""};
+	}
+	return {SupplicantStatusCode::SUCCESS, ""};
+}
+
+
 std::pair<SupplicantStatus, android::sp<ISupplicantVendorNetwork>>
 VendorP2pIface::getNetworkInternal(SupplicantNetworkId id)
 {
@@ -154,11 +171,13 @@ wpa_supplicant* VendorP2pIface::retrieveGroupIfacePtr(const std::string& group_i
 }
 
 Return<void> VendorP2pIface::setVendorInfoElement(
-    const hidl_vec<uint8_t>& ie,
+    const hidl_vec<uint8_t>& info,
     hidl_bitfield<ISupplicantVendorP2PIfaceCallback::InfoElementType> type,
     setVendorInfoElement_cb _hidl_cb)
 {
-    return Void();
+	return validateAndCall(
+	    this, SupplicantStatusCode::FAILURE_IFACE_INVALID,
+	    &VendorP2pIface::setVendorInfoElementInternal, _hidl_cb, info,type);
 }
 
 }  // namespace implementation
